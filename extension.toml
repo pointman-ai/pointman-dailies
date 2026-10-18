@@ -1,0 +1,120 @@
+# The dailies: the folder publisher the Python node had built in (agent/daemon.py and publisher.py),
+# as an extension, so publishing goes on once that node stops (MB-191; thread 649 [4340]).
+# Format: docs/dev/extensions.md. How it takes over from the Python node: README.md.
+
+[extension]
+id = "dailies"
+name = "Dailies"
+version = "0.1.1"
+publisher = "aurelio"
+summary = "Publishes new and changed work in a folder when it settles: video proxies, images, audio, pages and frame sequences."
+node = ">=0.1,<1"
+platforms = ["macos-arm64", "linux-x86_64", "linux-arm64"]
+
+[run]
+command = ["python", "-m", "pointman_dailies"]
+runtime = "python3.12"
+
+[permissions]
+folders = ["~/Documents/youtube"]
+
+[settings]
+type = "object"
+
+[settings.properties.root]
+type = "string"
+title = "Folder"
+description = "The folder it watches and publishes from. It must be one of permissions.folders: the node publishes nothing from elsewhere."
+default = "~/Documents/youtube"
+
+[settings.properties.ignore]
+type = "array"
+items = { type = "string" }
+title = "Ignore"
+description = "File or folder names left alone anywhere in the folder (shell patterns)."
+default = [".*", "__pycache__", "node_modules", "*.egg-info", "site-packages", "*.cmproj", "*.tscproj", "*.fcpbundle", "*.app", "*.photoslibrary", "*.logicx", "*.blend1", "*.blend@", "~*", "review-notes.md"]
+
+[settings.properties.extra_ignore]
+type = "array"
+items = { type = "string" }
+title = "Also ignore"
+default = []
+
+[settings.properties.stable_seconds]
+type = "number"
+title = "Settle for"
+description = "Seconds a file's size and time must hold still before it's published (recordings and renders in progress are left alone)."
+minimum = 0
+default = 20
+
+[settings.properties.scan_interval]
+type = "number"
+title = "Full scan every"
+description = "Seconds between full scans; changes are seen sooner as they happen."
+minimum = 30
+default = 300
+
+[settings.properties.auto_documents]
+type = "array"
+items = { type = "string" }
+title = "Documents"
+description = "Of documents, only these extensions publish by themselves."
+default = ["pdf"]
+
+[settings.properties.video]
+type = "object"
+title = "Video proxies"
+properties = { height = { type = "integer", minimum = 144 }, bitrate = { type = "string" }, audio_bitrate = { type = "string" } }
+default = { height = 1080, bitrate = "4M", audio_bitrate = "160k" }
+
+[settings.properties.rules]
+type = "array"
+title = "Rules"
+description = "By path pattern: skip = true never publishes; video = {height, bitrate} for smaller proxies."
+items = { type = "object", required = ["match"], properties = { match = { type = "string" }, skip = { type = "boolean" }, video = { type = "object" } } }
+default = [{ match = "*/raw/*", video = { height = 720, bitrate = "2500k" } }]
+
+[settings.properties.notes_file]
+type = "string"
+title = "Review notes file"
+description = "Each project's comments are written to <project>/<this> for sessions to read. Empty: off."
+default = "review-notes.md"
+
+[settings.properties.min_free_gb]
+type = "number"
+title = "Keep free (GB)"
+default = 10
+
+[settings.properties.light_workers]
+type = "integer"
+title = "Images at once"
+description = "Images, audio and pages published side by side (video, one at a time)."
+minimum = 1
+maximum = 16
+default = 6
+
+[settings.properties.keep_awake]
+type = "string"
+title = "Keep the Mac awake"
+enum = ["while_busy", "always", "never"]
+default = "while_busy"
+
+[settings.properties.takeover]
+type = "string"
+title = "Python node's state"
+description = "Its state.db, whose published files aren't published again. Empty: where the Python node keeps it."
+default = ""
+
+[[commands]]
+kind = "dailies.publish"
+title = "Publish a file"
+params = { type = "object", required = ["path"], properties = { path = { type = "string", minLength = 1, description = "Under the folder, relative or absolute; a folder queues its files." }, caption = { type = "string" }, as_is = { type = "boolean", description = "The file exactly as it is (and a playable copy of a video)." }, channel_id = { type = "integer" }, thread_id = { type = "integer" }, title = { type = "string" }, text = { type = "string" }, by = { type = "string", description = "Who asked (the request's created_by)." }, request_id = { type = "integer", description = "The board's request: core posts the file where it asked, as whoever asked." } } }
+
+[[commands]]
+kind = "dailies.rescan"
+title = "Rescan the folder"
+params = { type = "object" }
+
+[[events]]
+name = "dailies.status"
+description = "The folder, what's waiting to settle, queued and being published, recent failures, and what was taken over from the Python node."
