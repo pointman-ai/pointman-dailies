@@ -8,6 +8,8 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
+import pointman_extension_types as types
+
 from . import media, pages, sequences
 from .config import Config, kind_of
 from .media import Build
@@ -25,26 +27,29 @@ class CoreError(RuntimeError):
     pass
 
 
+def _number(ref) -> int | None:
+    """A typed id's number (file_2636 is 2636), as the state keeps it and core's node routes take it."""
+    value = ref.value if ref is not None else ""
+    tail = value.rsplit("_", 1)[-1]
+    return int(tail) if tail.isdigit() else None
+
+
 class Node:
     """What the node does for us: it holds the token, so every call to core goes through it."""
 
-    def __init__(self, request: Callable[..., dict]):
+    def __init__(self, request: Callable[..., types.Message]):
         self._request = request          # Extension.request
 
     def publish(self, body: dict) -> dict:
-        return self._request("files.publish", {"body": body}, PUBLISH_WAIT)
+        """{asset_id, version_id}: the file and version the node published, by their numbers."""
+        got = self._request(types.FilesPublishRequest(body=body), PUBLISH_WAIT)
+        return {"asset_id": _number(got.file), "version_id": _number(got.version)}
 
     def call(self, method: str, path: str, body=None, *, gzip: bool = False, timeout: float = 60):
-        params = {"method": method, "path": path}
-        if body is not None:
-            params["body"] = body
-        if gzip:
-            params["gzip"] = True
-        r = self._request("core.call", params, timeout) or {}
-        status = int(r.get("status") or 0)
-        if status >= 400:
-            raise CoreError(f"{method} {path} -> {status}: {str(r.get('body'))[:300]}")
-        return r.get("body")
+        r = self._request(types.CoreCallRequest(method=method, path=path, body=body, gzip=gzip), timeout)
+        if r.status >= 400:
+            raise CoreError(f"{method} {path} -> {r.status}: {str(r.body)[:300]}")
+        return r.body
 
 
 class Publisher:
