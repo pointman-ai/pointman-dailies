@@ -27,7 +27,7 @@ pointman add dailies
   `stable_seconds`, so recordings and renders in progress are left alone. Eight or more numbered frames
   (`seq/shot-####.png`) wait for the render to pause and publish as one video. An HTML page is published
   with the files it loads.
-- **Publishes only what a sync covers** (`start_sync` on the board), in that sync's thread. Nothing else
+- **Publishes only what a sync covers** (`create_sync` on the board), in that sync's thread. Nothing else
   publishes by itself. Ignored names and `rules` with `skip = true` never publish.
 - **What it builds:** for a video, a proxy (HEVC on a Mac with VideoToolbox, H.264 elsewhere, at
   `video`'s or a rule's size and bitrate; a video that's already light is only remuxed) with a poster and
@@ -43,7 +43,7 @@ It holds no token: files go to the board through the node, and so does every oth
 
 ## Commands
 
-Agents call them on a machine with `run_on_machine`. `share_file` and `pointman push` of a file in the
+Agents call them on a machine with `create_job`. `share_file` and `pointman push` of a file in the
 folder come here too.
 
 | Kind | Params | What |
