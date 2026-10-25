@@ -18,10 +18,7 @@ import sys
 import threading
 from pathlib import Path
 
-try:
-    from pointman_extension import Extension
-except ImportError:                 # a node from before the rename (thread 2255 [3561])
-    from mb_extension import Extension  # type: ignore[no-redef]
+from pointman_extension import Extension
 
 from .config import Config
 from .dailies import Dailies, log
@@ -89,16 +86,6 @@ def started() -> None:
         start()
     finally:
         ready.set()
-
-
-@ext.on_settings
-def settings_changed(_settings: dict) -> None:
-    """New settings (another root, other ignore patterns): start again with them. A publish in
-    progress finishes on its old worker."""
-    old = now.get("dailies")
-    if old is not None:
-        old.close()
-    start()
 
 
 def running() -> Dailies:

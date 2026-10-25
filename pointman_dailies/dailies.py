@@ -381,8 +381,7 @@ class Dailies:
             job.error = str(e) or type(e).__name__
             return
         job.result = out
-        log(f"published {rel} as asset {out.get('asset_id')} v{out.get('number')}"
-            + (" (unchanged)" if out.get("deduped") else ""))
+        log(f"published {rel} as file {out.get('asset_id')}, version {out.get('version_id')}")
 
     # ------------------------------------------------------------ asked for (dailies.publish)
 
