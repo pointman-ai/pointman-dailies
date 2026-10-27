@@ -5,10 +5,10 @@
 [extension]
 id = "dailies"
 name = "Dailies"
-version = "0.2.0"
+version = "0.3.0"
 publisher = "aurelio"
 summary = "Publishes new and changed work in a folder when it settles: video proxies, images, audio, pages and frame sequences."
-node = ">=0.2.0"
+node = ">=0.4.0"
 platforms = ["macos-arm64", "linux-x86_64", "linux-arm64"]
 
 [run]
