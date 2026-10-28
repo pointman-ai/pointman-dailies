@@ -69,5 +69,20 @@ class FolderTests(unittest.TestCase):
         self.assertGreater(self.calls.count(("GET", "/v1/node/syncs")), before)
 
 
+@unittest.skipUnless(StandInNode, "needs the node's Python SDK ($POINTMAN_EXTENSIONS_SDK)")
+class PublishTests(unittest.TestCase):
+    def test_the_published_file_and_version_are_kept_by_their_numbers(self):
+        from pointman_dailies.publisher import Node
+        asked = []
+
+        def request(message, timeout):           # files.publish, as the node answers it
+            asked.append(message)
+            return types.FilesPublishResponse(file=types.FileRef(id="file_2636"),
+                                              version=types.FileVersionRef(id="ver_7"))
+
+        self.assertEqual(Node(request).publish({"files": []}), {"asset_id": 2636, "version_id": 7})
+        self.assertIsInstance(asked[0], types.FilesPublishRequest)
+
+
 if __name__ == "__main__":
     unittest.main()

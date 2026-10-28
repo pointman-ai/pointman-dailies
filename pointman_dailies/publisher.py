@@ -28,8 +28,8 @@ class CoreError(RuntimeError):
 
 
 def _number(ref) -> int | None:
-    """A typed id's number (file_2636 is 2636), as the state keeps it and core's node routes take it."""
-    value = ref.value if ref is not None else ""
+    """A reference's number (file_2636 is 2636), as the state keeps it and core's node routes take it."""
+    value = ref.id if ref is not None else ""
     tail = value.rsplit("_", 1)[-1]
     return int(tail) if tail.isdigit() else None
 
