@@ -68,6 +68,56 @@ class FolderTests(unittest.TestCase):
             time.sleep(0.05)
         self.assertGreater(self.calls.count(("GET", "/v1/node/syncs")), before)
 
+    def count(self, path: str) -> int:
+        return sum(1 for m, p in self.calls if m == "GET" and p.split("?")[0] == path)
+
+    def test_syncs_are_read_as_it_starts_then_only_when_the_node_says_they_changed(self):
+        self.status()
+        time.sleep(2.5)                                   # the main loop goes round every second: no poll
+        self.assertEqual(self.count("/v1/node/syncs"), 1, self.calls)
+        self.node.notify(types.SyncsChangedRequest())
+        for _ in range(100):
+            if self.count("/v1/node/syncs") > 1:
+                break
+            time.sleep(0.05)
+        self.assertEqual(self.count("/v1/node/syncs"), 2, self.calls)
+
+
+@unittest.skipUnless(StandInNode, "needs the node's Python SDK ($POINTMAN_EXTENSIONS_SDK)")
+class NotesTests(unittest.TestCase):
+    """Review notes are read as it starts, then only when the node says core's changed (notes.changed)."""
+
+    def test_notes_are_read_when_the_node_says_they_changed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = (Path(tmp) / "youtube").resolve()
+            (root / "loft").mkdir(parents=True)
+            calls = []
+
+            def core_call(req):
+                calls.append((req.method, req.path.split("?")[0]))
+                return types.CoreCallResponse(status=200, body=[])
+
+            node = StandInNode(ROOT, settings={"root": str(root), "keep_awake": "never",
+                                               "notes_file": "review-notes.md", "takeover": str(Path(tmp) / "none.db")},
+                               methods={"core.call": core_call}, state_dir=Path(tmp) / "node", roots=[root])
+            node.start()
+            try:
+                notes = lambda: calls.count(("GET", "/v1/node/notes"))   # noqa: E731
+                for _ in range(100):
+                    if notes():
+                        break
+                    time.sleep(0.05)
+                time.sleep(2.5)
+                self.assertEqual(notes(), 1, calls)
+                node.notify(types.NotesChangedRequest())
+                for _ in range(100):
+                    if notes() > 1:
+                        break
+                    time.sleep(0.05)
+                self.assertEqual(notes(), 2, calls)
+            finally:
+                node.stop()
+
 
 @unittest.skipUnless(StandInNode, "needs the node's Python SDK ($POINTMAN_EXTENSIONS_SDK)")
 class PublishTests(unittest.TestCase):

@@ -4,8 +4,8 @@
 - dailies.publish: share_file and `pointman push` (core's `publish` job): one file now, or a folder's
   files through the usual settling.
 - dailies.rescan: core's `rescan` job: a full scan and core's syncs again, now.
-- dailies.syncs_changed (a method): the node saw core's syncs change; look at them now rather than
-  within SYNCS_EVERY.
+- syncs.changed and notes.changed (the node's notifications): core's syncs or review notes changed; read them now.
+  They're read as it starts and then only then: core pushes them (node 0.4.6), so nothing polls them.
 
 Files go through the node (files.publish) and so does every other call to core (core.call): the
 extension never holds a token.
@@ -114,12 +114,22 @@ def rescan(job):
     return running().rescan()
 
 
-@ext.method("dailies.syncs_changed")
-def syncs_changed(_params: dict) -> dict:
-    d = running()
-    d.syncs_now.set()
-    d.kick.set()
-    return {}
+def told(asked: str) -> None:
+    """The node says core's syncs or notes changed. Not started yet: it reads them as it starts."""
+    d = now.get("dailies")
+    if d is not None:
+        getattr(d, asked).set()
+        d.kick.set()
+
+
+@ext.method("syncs.changed")
+def syncs_changed(_req) -> None:
+    told("syncs_now")
+
+
+@ext.method("notes.changed")
+def notes_changed(_req) -> None:
+    told("notes_now")
 
 
 ext.run()
