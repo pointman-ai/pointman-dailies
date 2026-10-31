@@ -32,8 +32,7 @@ HEAVY = {"video", "model"}
 SEQUENCE_WAIT = 3   # x stable_seconds: a render writing frames must pause at least this long
 SEQUENCE_MIN_INTERVAL = 600   # republish a growing sequence at most every 10 minutes
 MAX_ATTEMPTS = 3
-SYNCS_EVERY = 15    # seconds between looks at core's syncs (or at once: dailies.syncs_changed)
-NOTES_EVERY = 60
+RETRY = 30          # seconds before a failed read of core's syncs or notes is tried again
 STATUS_EVERY = 2
 
 
@@ -67,7 +66,8 @@ class Dailies:
         self.queued: set[str] = set()
         self.kick = threading.Event()
         self.scan_now = threading.Event()
-        self.syncs_now = threading.Event()
+        self.syncs_now = threading.Event()     # core's syncs changed (syncs.changed), or a rescan: read them now
+        self.notes_now = threading.Event()     # and its notes (notes.changed)
         self.syncs: list[dict] = []
         self._syncs_lock = threading.Lock()
         self.heavy: queue.Queue[Job] = queue.Queue()
@@ -519,16 +519,18 @@ class Dailies:
 
     # ------------------------------------------------------------ main
 
-    def _step(self, name: str, fn) -> None:
-        """One part of the main loop; failures are logged, never the end of it."""
+    def _step(self, name: str, fn) -> bool:
+        """One part of the main loop; failures are logged, never the end of it. Whether it went."""
         try:
             fn()
+            return True
         except CoreError as e:
             log(f"{name}: {e}")
         except Exception as e:  # noqa: BLE001
             import traceback
             log(f"{name} failed: {traceback.format_exc()}")
             self.last_error = f"{name}: {e}"
+        return False
 
     def start(self) -> None:
         if not self.cfg.root.is_dir():
@@ -547,23 +549,29 @@ class Dailies:
             f"{datetime.fromtimestamp(self.baseline).isoformat(timespec='minutes')}")
 
     def loop(self) -> None:
-        self._step("syncs", self.refresh_syncs)     # what to publish by itself, before the first scan
+        again = {"syncs": 0.0, "notes": 0.0}       # when a failed read is tried again (0: it didn't fail)
+
+        def read(name: str, asked: threading.Event, fn) -> None:
+            """Core's syncs or notes: read at the start, then only when the node says they changed (syncs.changed,
+            notes.changed: core pushes them, so nothing polls them) or a rescan asks. A failed read goes again after
+            RETRY."""
+            if asked.is_set() or (again[name] and time.time() >= again[name]):
+                asked.clear()
+                again[name] = 0.0 if self._step(name, fn) else time.time() + RETRY
+
+        self.syncs_now.set()
+        self.notes_now.set()
+        read("syncs", self.syncs_now, self.refresh_syncs)     # what to publish by itself, before the first scan
         self._step("scan", self.full_scan)
-        last_syncs = time.time()
-        last_notes = last_status = 0.0
+        last_status = 0.0
         while not self.stop.is_set():
-            if self.syncs_now.is_set() or time.time() - last_syncs > SYNCS_EVERY:
-                self.syncs_now.clear()
-                last_syncs = time.time()
-                self._step("syncs", self.refresh_syncs)
+            read("syncs", self.syncs_now, self.refresh_syncs)
             if self.scan_now.is_set() or time.time() - self.last_scan > self.cfg.scan_interval:
                 self.scan_now.clear()
                 self._step("scan", self.full_scan)
                 self.last_scan = time.time()
             self._step("settle", self.settle)
-            if time.time() - last_notes > NOTES_EVERY:
-                last_notes = time.time()
-                self._step("notes", self.sync_notes)
+            read("notes", self.notes_now, self.sync_notes)
             if time.time() - last_status > STATUS_EVERY:
                 last_status = time.time()
                 self._step("status", lambda: self.event(self.status()))

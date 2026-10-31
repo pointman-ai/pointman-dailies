@@ -51,8 +51,9 @@ folder come here too.
 | `dailies.publish` | `path`, `caption?`, `as_is?`, `channel_id?`, `thread_id?`, `title?`, `text?`, `by?`, `request_id?` | Publishes one file now, or a folder's files through settling. `path` is relative to `root`, or absolute inside it. `as_is`: the file exactly as it is (and a playable copy of a video). With `request_id`, it's posted where the board's request asked, as whoever asked |
 | `dailies.rescan` | | A full scan, and the board's syncs again, now |
 
-The node can also call the `dailies.syncs_changed` method when the board's syncs change, so they're read
-at once rather than within 15 s.
+It reads the board's syncs and review notes as it starts, then again only when the node says they changed
+(`syncs.changed`, `notes.changed`: core pushes them, from node 0.4.6), so it never polls them. A read that fails is
+tried again after 30 s.
 
 ## Status
 
