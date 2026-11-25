@@ -91,7 +91,7 @@ class Config:
         if rule and rule.skip:
             return False
         kind = kind_of(rel)
-        if kind == "document":      # PDFs yes; notes, READMEs and the like stay out of threads
+        if kind == "document":      # PDFs yes; notes, READMEs and the like stay out of channels
             return Path(rel).suffix.lower().lstrip(".") in self.auto_documents
         return kind is not None and kind != "model"
 

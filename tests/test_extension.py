@@ -26,7 +26,11 @@ class FolderTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = (Path(self.tmp.name) / "youtube").resolve()
         self.root.mkdir()
-        self.calls = []
+        self.calls, self.published = [], []
+
+        def publish(req):
+            self.published.append(req.body)
+            return types.FilesPublishResponse(file=types.FileRef(id="file_1"), version=types.FileVersionRef(id="ver_1"))
 
         def core_call(req):
             self.calls.append((req.method, req.path))
@@ -36,7 +40,8 @@ class FolderTests(unittest.TestCase):
 
         self.node = StandInNode(ROOT, settings={"root": str(self.root), "keep_awake": "never", "notes_file": "",
                                                 "takeover": str(Path(self.tmp.name) / "none.db")},
-                                methods={"core.call": core_call}, state_dir=Path(self.tmp.name) / "node",
+                                methods={"core.call": core_call, "files.publish": publish},
+                                state_dir=Path(self.tmp.name) / "node",
                                 roots=[self.root])
         self.node.start()
 
@@ -57,6 +62,13 @@ class FolderTests(unittest.TestCase):
         status = self.status()
         self.assertEqual(status["root"], str(self.root))
         self.assertTrue(status["allowed"])
+
+    def test_a_shared_file_is_posted_in_the_channel_and_thread_it_names(self):
+        self.status()
+        (self.root / "cut.bin").write_bytes(b"x")
+        where = {"channel_id": 2800, "in_thread": 32206, "text": "the cut"}
+        self.node.run("dailies.publish", {"path": "cut.bin", "as_is": True, **where})
+        self.assertEqual([b["post"] for b in self.published], [where])
 
     def test_a_rescan_reads_the_syncs_again(self):
         self.status()
