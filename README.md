@@ -1,7 +1,7 @@
 # dailies
 
 A Pointman extension that publishes a folder's work as it settles. It watches a folder on a node, waits
-for each new or changed file to stop changing, and posts it in the thread of the sync that covers it:
+for each new or changed file to stop changing, and posts it in the channel of the sync that covers it:
 video as a playable proxy, plus images, audio, PDFs, HTML pages with the files they load, and frame
 sequences as one video. Comments on what it posts are written back into each project's folder as a
 notes file, so a session working there can read them.
@@ -27,7 +27,7 @@ pointman add dailies
   `stable_seconds`, so recordings and renders in progress are left alone. Eight or more numbered frames
   (`seq/shot-####.png`) wait for the render to pause and publish as one video. An HTML page is published
   with the files it loads.
-- **Publishes only what a sync covers** (`create_sync` on the board), in that sync's thread. Nothing else
+- **Publishes only what a sync covers** (`create_sync` on the board), in that sync's channel. Nothing else
   publishes by itself. Ignored names and `rules` with `skip = true` never publish.
 - **What it builds:** for a video, a proxy (HEVC on a Mac with VideoToolbox, H.264 elsewhere, at
   `video`'s or a rule's size and bitrate; a video that's already light is only remuxed) with a poster and
@@ -48,7 +48,7 @@ folder come here too.
 
 | Kind | Params | What |
 |---|---|---|
-| `dailies.publish` | `path`, `caption?`, `as_is?`, `channel_id?`, `thread_id?`, `title?`, `text?`, `by?`, `request_id?` | Publishes one file now, or a folder's files through settling. `path` is relative to `root`, or absolute inside it. `as_is`: the file exactly as it is (and a playable copy of a video). With `request_id`, it's posted where the board's request asked, as whoever asked |
+| `dailies.publish` | `path`, `caption?`, `as_is?`, `channel_id?`, `in_thread?`, `text?`, `by?`, `request_id?` | Publishes one file now, or a folder's files through settling. `path` is relative to `root`, or absolute inside it. `as_is`: the file exactly as it is (and a playable copy of a video). With `request_id`, it's posted where the board's request asked, as whoever asked |
 | `dailies.rescan` | | A full scan, and the board's syncs again, now |
 
 It reads the board's syncs and review notes as it starts, then again only when the node says they changed

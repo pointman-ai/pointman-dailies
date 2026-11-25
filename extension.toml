@@ -108,7 +108,7 @@ default = ""
 [[commands]]
 kind = "dailies.publish"
 title = "Publish a file"
-params = { type = "object", required = ["path"], properties = { path = { type = "string", minLength = 1, description = "Under the folder, relative or absolute; a folder queues its files." }, caption = { type = "string" }, as_is = { type = "boolean", description = "The file exactly as it is (and a playable copy of a video)." }, channel_id = { type = "integer" }, thread_id = { type = "integer" }, title = { type = "string" }, text = { type = "string" }, by = { type = "string", description = "Who asked (the request's created_by)." }, request_id = { type = "integer", description = "The board's request: core posts the file where it asked, as whoever asked." } } }
+params = { type = "object", required = ["path"], properties = { path = { type = "string", minLength = 1, description = "Under the folder, relative or absolute; a folder queues its files." }, caption = { type = "string" }, as_is = { type = "boolean", description = "The file exactly as it is (and a playable copy of a video)." }, channel_id = { type = "integer" }, in_thread = { type = "integer" }, text = { type = "string" }, by = { type = "string", description = "Who asked (the request's created_by)." }, request_id = { type = "integer", description = "The board's request: core posts the file where it asked, as whoever asked." } } }
 
 [[commands]]
 kind = "dailies.rescan"
