@@ -413,11 +413,11 @@ class Dailies:
         if kind_of(rel) == "model" and not as_is:
             raise ValueError("3D files are the Blender extension's to preview (blender.preview); "
                              "share_file as_is=True sends the file itself")
-        shared = params.get("channel_id") or params.get("thread_id")
+        shared = params.get("channel_id") or params.get("in_thread")
         if shared and request_id:
             post = {"request_id": request_id}           # where they asked, as them
         elif shared:
-            post = {k: params[k] for k in ("channel_id", "thread_id", "title", "text") if params.get(k)}
+            post = {k: params[k] for k in ("channel_id", "in_thread", "text") if params.get(k)}
         else:
             sync = self.sync_for(rel)
             post = {"sync_id": sync["id"]} if sync else None
